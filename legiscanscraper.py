@@ -7,58 +7,55 @@ import os # allows for operating system level commands
 import re # regular expressions
 import io
 from PyPDF2 import PdfReader
+import pymongo
+from bson.json_util import dumps, loads
 
 class legiscanscraper:
     def __init__(self):
         dotenv.load_dotenv() # finds and loads (silently) the .env file
         self.legiscan_key = os.getenv('legiscan_key')
         self.root = 'https://api.legiscan.com'
-
-    def get_useragent(self):
-            url = 'https://httpbin.org/user-agent'
-            r = requests.get(url)
+        self.MONGO_INITDB_ROOT_USERNAME=os.getenv('MONGO_INITDB_ROOT_USERNAME') 
+        self.MONGO_INITDB_ROOT_PASSWORD=os.getenv('MONGO_INITDB_ROOT_PASSWORD') 
+        url = 'https://httpbin.org/user-agent'
+        r = requests.get(url)
+        if r.status_code==200:
             useragent = json.loads(r.text)['user-agent']
-            return useragent
-        
-    def make_headers(self,  email='jkropko@virginia.edu'):
-            useragent=self.get_useragent()
-            headers = {
-                    'User-Agent': useragent,
-                    'From': email
+            self.headers = {
+                'User-Agent': useragent,
+                'From': 'jkropko@virginia.edu'
             }
-            return headers
+        else:
+            useragent = json.loads(r.text)['user-agent']
+            self.headers = {
+                'User-Agent': 'python-requests/2.32.3',
+                'From': 'jkropko@virginia.edu'
+            }
 
     def get_sessions(self):
         params = {'key': self.legiscan_key,
                  'op': 'getSessionList'}
-        r = requests.get(self.root, params=params, headers=self.make_headers())
+        r = requests.get(self.root, params=params, headers=self.headers)
         myjson = json.loads(r.text)
         session_df = pd.json_normalize(myjson, record_path = ['sessions'])
         return session_df
 
-    def get_bill_list(self, sessionid):
+    def get_bill_list(self, sessionid, make_file=False):
         params = {'key': self.legiscan_key,
                   'op': 'getMasterList',
                   'id': sessionid}
-        r = requests.get(self.root, params=params, headers=self.make_headers())
+        r = requests.get(self.root, params=params, headers=self.headers)
         myjson = json.loads(r.text)['masterlist']
         del myjson['session']
         bill_df = pd.DataFrame(myjson).T
-        return bill_df
-
-    def get_onebill_info(self, billid):
-        params = {'key': self.legiscan_key,
-                  'op': 'getBill',
-                  'id': billid}
-        r = requests.get(self.root, params=params, headers=self.make_headers())
-        myjson = json.loads(r.text)
-        toreturn = {}
-        toreturn['bill_id'] = myjson['bill']['bill_id']
-        toreturn['session_id'] = myjson['bill']['session_id']
-        toreturn['title'] = myjson['bill']['title']
-        toreturn['description'] = myjson['bill']['description']
-        toreturn['textlink'] = myjson['bill']['texts'][0]['state_link']
-        return toreturn
+        bill_json_list = [self.get_onebill_info(x) for x in bill_df['bill_id']]
+        if make_file:
+            state = myjson['session']['state_id']
+            session_name = myjson['session']['session_name'].lower().replace(' ', '_')
+            filename = f'bills_{state}_{session_name}.json'
+            with open(filename, 'w') as fp:
+                json.dump(bill_json_list, fp)
+        return bill_df, bill_json_list
 
     def clean_text(self, text):
         # Remove page headers/footers and line numbers
@@ -87,12 +84,50 @@ class legiscanscraper:
         return cleaned_text
     
     def get_bill_text(self, textlink):
-        response = requests.get(url=textlink, headers=self.make_headers(), timeout=120)
+        response = requests.get(url=textlink, headers=self.headers, timeout=120)
+        response = requests.get(url=textlink, headers=self.headers, timeout=120)
         on_fly_mem_obj = io.BytesIO(response.content)
         pdf_file = PdfReader(on_fly_mem_obj)
         textlist = [x.extract_text() for x in pdf_file.pages]
         fulltext = ' '.join(textlist)
         clean_text = self.clean_text(fulltext)
         return clean_text
+
+    def get_onebill_info(self, billid):
+        print(billid)
+        params = {'key': self.legiscan_key,
+                  'op': 'getBill',
+                  'id': billid}
+        r = requests.get(self.root, params=params, headers=self.headers)
+        myjson = json.loads(r.text)
+        myjson['text'] = self.get_bill_text(myjson['bill']['texts'][0]['state_link'])
+        return myjson
+
+    def mongo_read_query(self, col, q):
+        qtext = dumps(col.find(q))
+        qrec = loads(qtext)
+        qdf = pd.DataFrame.from_records(qrec)
+        return qdf
+
+    def mongo_connect(self, billtext_from_scratch=False):
+        myclient = pymongo.MongoClient(f"mongodb://{MONGO_INITDB_ROOT_USERNAME}:{MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/")
+        legiscan_mongo = myclient['legiscan']
+        billtext_mongo = legiscan_mongo['billtext']
+        if billtext_from_scratch:
+            collist = legiscan_mongo.list_collection_names()
+            if "billtext" in collist:
+              legiscan_mongo.billtext.drop()
+            billtext_mongo = legiscan_mongo['billtext']
+        return billtext_mongo
+
+    #insert all bills from one session
+    def insert_list_of_bills(self, col, bill_list):
+        col.insert_many(bills_list)
         
-                
+
+    #loop over sessions/states and insert all bills into legiscan mongo DB
+
+    
+
+
+        
