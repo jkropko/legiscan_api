@@ -9,6 +9,7 @@ import io
 from PyPDF2 import PdfReader
 import pymongo
 from bson.json_util import dumps, loads
+import time
 
 class legiscanscraper:
     def __init__(self):
@@ -32,12 +33,14 @@ class legiscanscraper:
                 'From': 'jkropko@virginia.edu'
             }
 
-    def get_sessions(self):
+    def get_sessions(self, make_csv=False):
         params = {'key': self.legiscan_key,
                  'op': 'getSessionList'}
         r = requests.get(self.root, params=params, headers=self.headers)
         myjson = json.loads(r.text)
         session_df = pd.json_normalize(myjson, record_path = ['sessions'])
+        if make_csv:
+            sessions_df.query("sine_die==1")['session_id'].to_csv('concluded_session_ids.csv', index=False)
         return session_df
 
     def get_bill_list(self, sessionid, make_file=False):
@@ -46,13 +49,14 @@ class legiscanscraper:
                   'id': sessionid}
         r = requests.get(self.root, params=params, headers=self.headers)
         myjson = json.loads(r.text)['masterlist']
+        session_json = myjson['session']
         del myjson['session']
         bill_df = pd.DataFrame(myjson).T
         bill_json_list = [self.get_onebill_info(x) for x in bill_df['bill_id']]
         if make_file:
-            state = myjson['session']['state_id']
-            session_name = myjson['session']['session_name'].lower().replace(' ', '_')
-            filename = f'bills_{state}_{session_name}.json'
+            state = myjson['0']['url'][21:23] 
+            session_name = session_json['session_name'].lower().replace(' ', '_')
+            filename = f'Data/bills_{state}_{session_name}.json'
             with open(filename, 'w') as fp:
                 json.dump(bill_json_list, fp)
         return bill_df, bill_json_list
