@@ -99,12 +99,16 @@ class legiscanscraper:
 
     def get_onebill_info(self, billid):
         print(billid)
+        :
         params = {'key': self.legiscan_key,
                   'op': 'getBill',
                   'id': billid}
         r = requests.get(self.root, params=params, headers=self.headers)
         myjson = json.loads(r.text)
-        myjson['text'] = self.get_bill_text(myjson['bill']['texts'][0]['state_link'])
+        try:
+            myjson['text'] = self.get_bill_text(myjson['bill']['texts'][0]['state_link'])
+        except:
+            myjson['text'] = ''
         return myjson
 
     def mongo_read_query(self, col, q):
