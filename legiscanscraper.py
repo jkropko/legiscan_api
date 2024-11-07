@@ -99,7 +99,6 @@ class legiscanscraper:
 
     def get_onebill_info(self, billid):
         print(billid)
-        :
         params = {'key': self.legiscan_key,
                   'op': 'getBill',
                   'id': billid}
