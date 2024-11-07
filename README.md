@@ -31,3 +31,12 @@ pipeline-github-jupyterlab-1  |         http://127.0.0.1:8888/lab?token=205a9abc
 
 ```	
 Copy the URL that begins http://127.0.0.1:8888/ and paste it into a web browser to launch JupyterLab with all associated packages and databases connected.
+
+## Steps to run bill scraper for one session on Rivanna
+
+1. If off-grounds, use Cisco Secure Client and log on to a VPN. UVA Anywhere will suffice.
+
+2. On the command line, log on to Rivanna by typing `ssh -Y mst3k@login.hpc.virginia.edu` and entering UVA password
+
+3. Create Conda environment to get the 
+
