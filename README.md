@@ -36,7 +36,35 @@ Copy the URL that begins http://127.0.0.1:8888/ and paste it into a web browser 
 
 1. If off-grounds, use Cisco Secure Client and log on to a VPN. UVA Anywhere will suffice.
 
-2. On the command line, log on to Rivanna by typing `ssh -Y mst3k@login.hpc.virginia.edu` and entering UVA password
+2. On the command line, log on to Rivanna by typing `ssh -Y mst3k@login.hpc.virginia.edu` and entering UVA password, replacing `mst3k` with your UVA compute ID
 
-3. Create Conda environment to get the 
+3. Type `pwd`, confirm that the directory is `/home/mst3k`, replacing `mst3k` with your UVA compute ID
+
+4. (You only need to do this step the first time you set up this system) Type `git clone https://github.com/jkropko/legiscan_api`. Follow any additional instructions from GitHub
+      
+5. Type `cd legiscan_api` then `git pull origin main`
+
+6. Activate Conda, which enables us to use the most recent version of Python: `module load miniforge/24.3.0-py3.11` (Eventually this command will become outdated, but you can type `module spider miniforge` to see the latest version of the command)
+
+7. (You only need to do this step the first time you set up this system) Create the Python environment by typing
+
+    * `conda create -n legiscan_end python=3.12.5`
+    * `pip install -r requrements.txt`
+
+8. Activate the conda environment: `conda activate legiscan_env`
+
+9. (You only need to do this step the first time you set up the system) Create an .env file for the legiscan key:
+
+    * Type `touch .env` (this creates the empty text file named .env)
+    * Type `vim .env` (this opens the text editor to make changes on .env)
+    * Type `i` (this allows for new text to be typed in the file)
+    * Type in the file `legiscan_key=123456789` where 123456789 is your API key from legiscan
+    * Press ESC
+    * Press Shift and the ; key together
+    * Type `wq` and press return (this saves the changes and quits the text editor)
+    * On the original command line type `cat .env` and confirm that your API key appears
+
+10. Choose one session number from the ones listed in concluded_session_ids.csv (say 1254) and type: `python get_session_bills.py 1254`. The code will display each of the bill IDs on the screen, and create a file (such as "bills_AL_2017_regular_session.json") in the Data folder. 
+
+
 
