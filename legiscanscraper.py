@@ -27,7 +27,6 @@ class legiscanscraper:
                 'From': 'jkropko@virginia.edu'
             }
         else:
-            useragent = json.loads(r.text)['user-agent']
             self.headers = {
                 'User-Agent': 'python-requests/2.32.3',
                 'From': 'jkropko@virginia.edu'
