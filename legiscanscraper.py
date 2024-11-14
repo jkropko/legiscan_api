@@ -47,7 +47,11 @@ class legiscanscraper:
                   'op': 'getMasterList',
                   'id': sessionid}
         r = requests.get(self.root, params=params, headers=self.headers)
-        myjson = json.loads(r.text)['masterlist']
+        try:
+            myjson = json.loads(r.text)['masterlist']
+        except:
+            print(r.status_code)
+            print(r.text)
         session_json = myjson['session']
         del myjson['session']
         bill_df = pd.DataFrame(myjson).T
