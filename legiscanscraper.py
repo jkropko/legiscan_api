@@ -52,6 +52,7 @@ class legiscanscraper:
         except:
             print(r.status_code)
             print(r.text)
+            print(self.legiscan_key)
         session_json = myjson['session']
         del myjson['session']
         bill_df = pd.DataFrame(myjson).T
