@@ -10,4 +10,4 @@
 module load miniforge/24.3.0-py3.11
 conda activate legiscan_env
 pip install -r requirements.txt
-python get_session_bills.py %a
+python get_session_bills.py ${SLURM_ARRAY_TASK_ID}
